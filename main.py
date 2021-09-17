@@ -13,15 +13,20 @@ class RequestClient:
 
 requestClient = RequestClient()
 
-def request_worker(chunk):
-    for row in chunk:
-        requestClient.sendData(row)
-    return
+def do_work(queue):
+    # Get the current worker's name
+    worker_name = mp.current_process().name
 
-def request_worker_queue(queue):
     while True:
-        data = queue.get()
-        requestClient.sendData(data)
+        if queue.empty():
+            # print("queue is empty")
+            break
+        else:
+            # print("get data in worker " + worker_name)
+            data = queue.get()
+            requestClient.sendData(data)
+        
+   
 
 def fillQueue(dataset, queue):
     for data in dataset:
@@ -29,21 +34,32 @@ def fillQueue(dataset, queue):
 
 
 def sendDataParallel(dataset, workers):
+    m = mp.Manager()
+    pqueue = m.Queue()
+    processes = []
+
     startTime = int(time.time())
 
-    pool = mp.Pool(processes=workers)
-    result = pool.map(request_worker, [(chunk) 
-        for chunk in np.array_split(dataset, workers)])
-    pool.close()
-    pool.join()
+    fillQueue(dataset, pqueue) 
 
+    for c in range(workers): 
+        p = mp.Process(target=do_work, args=((pqueue),))
+        p.name = 'worker ' + str(c)
+        processes.append(p)
+        p.start()
+    
+    for p in processes:
+        p.join()
+    
     finishTime = int(time.time())
     return finishTime - startTime
+
 
 def sendDataSequential(dataset):
     startTime = int(time.time())
 
-    request_worker(dataset)
+    for row in dataset:
+        requestClient.sendData(row)
 
     finishTime = int(time.time())
     return finishTime - startTime
@@ -61,13 +77,13 @@ if __name__ == '__main__':
 
     print("Start sending data to cloud....")
 
-    sequentialTime = sendDataSequential(dataset)
-
-    print("Sequential time: " + str(datetime.timedelta(seconds=sequentialTime)))
-
     parallelTime = sendDataParallel(dataset, workers)
 
     print("Parallel time: " + str(datetime.timedelta(seconds=parallelTime)))
+
+    sequentialTime = sendDataSequential(dataset)
+
+    print("Sequential time: " + str(datetime.timedelta(seconds=sequentialTime)))
 
     print("All data was sended!")
 
