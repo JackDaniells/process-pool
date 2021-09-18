@@ -4,7 +4,10 @@ import numpy as np
 import time, datetime
 from random import randint
 
+DATASET = 'D1'
+WORKERS = 4
 
+# ------
 class RequestClient:
     def sendData(self, data):
         t = randint(2, 6) / 10
@@ -13,6 +16,7 @@ class RequestClient:
 
 requestClient = RequestClient()
 
+# ------
 def do_work(queue):
     # Get the current worker's name
     worker_name = mp.current_process().name
@@ -68,16 +72,14 @@ def sendDataSequential(dataset):
 # ------
 if __name__ == '__main__':
 
-    workers = 4
 
     # get dataset
-    # df = pd.read_csv('datasets/beach-water-quality-automated-sensors-1.csv')
-    df = pd.read_csv('datasets/dataset.csv')
+    df = pd.read_csv('datasets/' + DATASET + '.csv')
     dataset = df.to_numpy()
 
     print("Start sending data to cloud....")
 
-    parallelTime = sendDataParallel(dataset, workers)
+    parallelTime = sendDataParallel(dataset, WORKERS)
 
     print("Parallel time: " + str(datetime.timedelta(seconds=parallelTime)))
 
@@ -88,7 +90,7 @@ if __name__ == '__main__':
     print("All data was sended!")
 
     speedup = sequentialTime / parallelTime
-    eficiency = speedup / workers
+    eficiency = speedup / WORKERS
 
     print("Speedup: " + str(speedup))
     print("Eficiency: " + str(eficiency))
