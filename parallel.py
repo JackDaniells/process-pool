@@ -16,7 +16,11 @@ def worker(queue):
         else:
             # print("get data in worker " + worker_name)
             data = queue.get()
-            client.post(data)
+
+            err = client.post(data)
+
+            if err == True:
+                queue.put(data)
 
 
 def createQueue(dataset):
